@@ -62,12 +62,12 @@ struct is_closing_brace
   }
 };
 
-int main()
+int main(int argc, char **argv)
 {
   cout << "CUDA JSON Validator" << endl << endl;
 
-
-  ifstream ifile("samples/senators_short.json");
+  const string& json_file = argc == 2 ? argv[1] : "samples/senators_short.json";
+  ifstream ifile(json_file);
 
   ostringstream ss;
   ss << ifile.rdbuf();

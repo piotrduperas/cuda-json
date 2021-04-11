@@ -67,7 +67,7 @@ int main()
   cout << "CUDA JSON Validator" << endl << endl;
 
 
-  ifstream ifile("senators_short.json");
+  ifstream ifile("samples/senators_short.json");
 
   ostringstream ss;
   ss << ifile.rdbuf();

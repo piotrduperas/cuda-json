@@ -3,7 +3,7 @@ Parallel algorithm for finding parentheses, locating objects and checking correc
 
 ## How to build?
 ```
-nvcc main.cu -o main
+nvcc common.cu main.cu -o main
 ```
 
 ## Sample data

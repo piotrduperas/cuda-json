@@ -101,8 +101,6 @@ int main(int argc, char **argv)
 
   size_t file_size = H_file.size();
 
-
-
   // Copy file to device memory
   thrust::copy(H_file.begin(), H_file.end(), D_file.begin());
 
@@ -118,7 +116,6 @@ int main(int argc, char **argv)
   // Filter only braces
   auto last_brace_it = thrust::copy_if(char_and_pos, char_and_pos + s.length(), D_braces_pos.begin(), is_brace());
   D_braces_pos.resize(last_brace_it - D_braces_pos.begin());
-
 
   // Transform { to 1, } to -1
   thrust::transform(D_braces_pos.begin(), D_braces_pos.end(), D_braces_pos.begin(), braces_to_numbers());

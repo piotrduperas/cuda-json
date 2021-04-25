@@ -15,9 +15,62 @@
 #include <sstream>
 #include <chrono>
 #include "common.cuh"
+#include <stack>
 
 using namespace std;
 
+bool is_opening_bracket(const char& c)
+{
+  if(c=='{' || c=='[') return true;
+  return false;
+}
+
+bool is_closing_bracket(const char& c)
+{
+  if(c=='}' || c==']') return true;
+  return false;
+}
+
+bool is_bracket_coresponding(const char& c, const char& c_stack)
+{
+  if(c=='}') 
+  {
+    if(c_stack=='{') return true;
+  }
+  else if(c==']')
+  {
+    if(c_stack=='[') return true;
+  }
+  return false;
+}
+
+__host__
+bool h_is_balanced_parentheses(const string& s)
+{
+    stack<char> bracket_stack;
+    int depth = 0;
+
+    for (auto it = s.cbegin() ; it != s.cend(); ++it) 
+    {
+      if(is_opening_bracket(*it))
+      {
+        bracket_stack.push(*it);
+        depth++;
+      }
+      else if(is_closing_bracket(*it))
+      {
+        if(is_bracket_coresponding(*it,bracket_stack.top()))
+        {
+          depth--;
+          if(depth<0) return false;
+          bracket_stack.pop();
+        }
+        else return false;
+      }
+    }
+    if(depth==0) return true;
+    return false;
+}
 
 int main(int argc, char **argv)
 {
@@ -34,6 +87,13 @@ int main(int argc, char **argv)
   const string& s = ss.str();
 
   elapsedTime(startReadingFile, "Reading file");
+
+  auto startCpu = chrono::steady_clock::now();
+  //cpu
+  string result = h_is_balanced_parentheses(s) ? "correct" : "wrong";
+  cout << "\nCpu algorithm claims that file is " << result <<endl;
+  elapsedTime(startCpu, "Cpu alogithm");
+
   auto startCopying = chrono::steady_clock::now();
 
   thrust::host_vector<char> H_file(s.begin(), s.end());
@@ -56,7 +116,6 @@ int main(int argc, char **argv)
   // Filter only braces
   auto last_brace_it = thrust::copy_if(char_and_pos, char_and_pos + s.length(), D_braces_pos.begin(), is_brace());
   D_braces_pos.resize(last_brace_it - D_braces_pos.begin());
-
 
   // Transform { to 1, } to -1
   thrust::transform(D_braces_pos.begin(), D_braces_pos.end(), D_braces_pos.begin(), braces_to_numbers());

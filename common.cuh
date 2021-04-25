@@ -40,7 +40,7 @@ struct braces_to_numbers
   }
 };
 
-struct is_brace
+struct is_brace_or_bracket
 {
   __host__ __device__
   bool operator()(const char_and_position& x)

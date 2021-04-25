@@ -114,7 +114,7 @@ int main(int argc, char **argv)
   auto char_and_pos = thrust::make_zip_iterator(thrust::make_tuple(D_file.begin(), thrust::make_counting_iterator(0)));
   
   // Filter only braces
-  auto last_brace_it = thrust::copy_if(char_and_pos, char_and_pos + s.length(), D_braces_pos.begin(), is_brace());
+  auto last_brace_it = thrust::copy_if(char_and_pos, char_and_pos + s.length(), D_braces_pos.begin(), is_brace_or_bracket());
   D_braces_pos.resize(last_brace_it - D_braces_pos.begin());
 
   thrust::device_vector<json_char> D_json_chars(D_braces_pos.size());

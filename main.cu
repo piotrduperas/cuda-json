@@ -143,9 +143,9 @@ int main(int argc, char **argv)
     result = "Uneven number of braces";
   } else if(braces_count > 0){
     auto adjacent_braces = thrust::make_zip_iterator(thrust::make_tuple(D_one_type_only.begin(), D_one_type_only.begin() + 1));
-    bool are_braces_corrent = thrust::all_of(adjacent_braces, adjacent_braces + braces_count - 1, opening_and_closing_chars_have_the_same_level());
+    bool are_braces_correct = thrust::all_of(adjacent_braces, adjacent_braces + braces_count - 1, opening_and_closing_chars_have_the_same_level());
 
-    if(!are_braces_corrent){
+    if(!are_braces_correct){
       result = "Something between some braces is incorrect";
     }
   }
@@ -158,11 +158,18 @@ int main(int argc, char **argv)
     result = "Uneven number of brackets";
   } else if(brackets_count > 0){
     auto adjacent_brackets = thrust::make_zip_iterator(thrust::make_tuple(D_one_type_only.begin(), D_one_type_only.begin() + 1));
-    bool are_brackets_corrent = thrust::all_of(adjacent_brackets, adjacent_brackets + brackets_count - 1, opening_and_closing_chars_have_the_same_level());
+    bool are_brackets_correct = thrust::all_of(adjacent_brackets, adjacent_brackets + brackets_count - 1, opening_and_closing_chars_have_the_same_level());
 
-    if(!are_brackets_corrent){
+    if(!are_brackets_correct){
       result = "Something between some brackets is incorrect";
     }
+  }
+
+  auto adjacent_chars = thrust::make_zip_iterator(thrust::make_tuple(D_json_chars.begin(), D_json_chars.begin() + 1));
+  bool are_chars_correct = thrust::all_of(adjacent_chars, adjacent_chars + D_json_chars.size() - 1, opening_and_closing_chars_are_corresponding());
+
+  if(!are_chars_correct){
+    result = "Found sequence [} or {]";
   }
 
   elapsedTime(startCalculations, "Calculations");

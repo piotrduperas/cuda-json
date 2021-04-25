@@ -120,9 +120,27 @@ struct opening_and_closing_chars_have_the_same_level
   {
     json_char c1 = x.get<0>();
     json_char c2 = x.get<1>();
-    
+
     if(c1.type == 1 && c2.type == -1) {
       return c1.level == c2.level;
+    }
+    return true;
+  }
+};
+
+struct opening_and_closing_chars_are_corresponding
+{
+  __host__ __device__
+  bool operator()(const adjacent_chars& x)
+  {
+    json_char c1 = x.get<0>();
+    json_char c2 = x.get<1>();
+    
+    if(c1._char == '[') {
+      return c2._char != '}';
+    }
+    if(c1._char == '{') {
+      return c2._char != ']';
     }
     return true;
   }

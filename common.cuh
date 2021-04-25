@@ -45,7 +45,12 @@ struct is_brace
   __host__ __device__
   bool operator()(const char_and_position& x)
   {
-    return x.get<0>() == '{' || x.get<0>() == '}';
+    char c = x.get<0>();
+    return 
+      c == '{' || 
+      c == '}' ||
+      c == '[' ||
+      c == ']';
   }
 };
 
@@ -71,6 +76,15 @@ struct is_closing_brace
   __host__ __device__
   bool operator()(const json_char& x) const { 
     return x.type == -1;
+  }
+};
+
+struct assign_level_to_json_char
+{
+  __host__ __device__
+  json_char operator()(json_char& x, const short& level) const { 
+    x.level = level;
+    return x;
   }
 };
 

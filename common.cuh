@@ -15,15 +15,28 @@ struct json_char {
   char type; // 1 for opening or -1 for closing
   int position; // position in file
   short level;
-}
+};
 
 struct braces_to_numbers
 {
   __host__ __device__
-  char_and_position operator()(const char_and_position& x) const { 
-    if(x.get<0>() == '{') return char_and_position(1, x.get<1>());
-    if(x.get<0>() == '}') return char_and_position(-1, x.get<1>());
-    return char_and_position(0, x.get<1>());
+  json_char operator()(const char_and_position& x) const { 
+    json_char c;
+    c.position = x.get<1>();
+    c._char = x.get<0>();
+
+    switch(c._char) {
+      case '{':
+      case '[':
+        c.type = 1;
+        break;
+      case '}':
+      case ']':
+        c.type = -1;
+        break;
+    }
+
+    return c;
   }
 };
 
@@ -36,27 +49,28 @@ struct is_brace
   }
 };
 
-struct get_char_from_tuple
+struct get_type_from_json_char
 {
   __host__ __device__
-  char operator()(const char_and_position& x) const { 
-    return x.get<0>();
+  char operator()(const json_char& x) const { 
+    return x.type;
   }
 };
 
 struct increment
 {
   __host__ __device__
-  short operator()(const short& x) const { 
-    return x + 1;
+  json_char operator()(json_char& x) const { 
+    x.level++;
+    return x;
   }
 };
 
 struct is_closing_brace
 {
   __host__ __device__
-  bool operator()(const char_and_position& x) const { 
-    return x.get<0>() == -1;
+  bool operator()(const json_char& x) const { 
+    return x.type == -1;
   }
 };
 

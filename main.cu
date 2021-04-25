@@ -117,14 +117,16 @@ int main(int argc, char **argv)
   auto last_brace_it = thrust::copy_if(char_and_pos, char_and_pos + s.length(), D_braces_pos.begin(), is_brace());
   D_braces_pos.resize(last_brace_it - D_braces_pos.begin());
 
-  // Transform { to 1, } to -1
-  thrust::transform(D_braces_pos.begin(), D_braces_pos.end(), D_braces_pos.begin(), braces_to_numbers());
-
+  thrust::device_vector<json_char> D_json_chars(D_braces_pos.size());
   thrust::device_vector<short> D_levels(D_braces_pos.size());
 
+  // Transform { to 1, } to -1
+  thrust::transform(D_braces_pos.begin(), D_braces_pos.end(), D_json_chars.begin(), braces_to_numbers());
+
+
   // Calculate nesting levels of braces
-  thrust::transform_inclusive_scan(D_braces_pos.begin(), D_braces_pos.end(), D_levels.begin(), get_char_from_tuple(), thrust::plus<short>());
-  thrust::transform_if(D_levels.begin(), D_levels.end(), D_braces_pos.begin(), D_levels.begin(), increment(), is_closing_brace());
+  thrust::transform_inclusive_scan(D_json_chars.begin(), D_json_chars.end(), D_levels.begin(), get_type_from_json_char(), thrust::plus<short>());
+  thrust::transform_if(D_json_chars.begin(), D_json_chars.end(), D_json_chars.begin(), D_json_chars.begin(), increment(), is_closing_brace());
 
   elapsedTime(startCalculations, "Calculations");
 
@@ -133,7 +135,7 @@ int main(int argc, char **argv)
     cout << thrust::get<1>((char_and_position)D_braces_pos[i]) << " - " << (thrust::get<0>((char_and_position)D_braces_pos[i]) == 1 ? '{' : '}') << " - " << D_levels[i] << endl;
   }*/
 
-  char last_brace_level = D_levels[D_levels.size() - 1];
+  char last_brace_level = ((json_char)D_json_chars[D_json_chars.size() - 1]).level;
 
   if(last_brace_level == 1){
     cout << "Braces in this JSON are correct" << endl;

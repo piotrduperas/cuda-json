@@ -9,3 +9,7 @@ main
 main.exe
 *.lib
 *.exp
+
+# big example files
+
+samples/citylots.json 

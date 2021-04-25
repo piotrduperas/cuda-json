@@ -73,6 +73,15 @@ int main(int argc, char **argv)
   /*for(int i = 0; i < D_braces_pos.size(); i++){
     cout << thrust::get<1>((char_and_position)D_braces_pos[i]) << " - " << (thrust::get<0>((char_and_position)D_braces_pos[i]) == 1 ? '{' : '}') << " - " << D_levels[i] << endl;
   }*/
+
+  char last_brace_level = D_levels[D_levels.size() - 1];
+
+  if(last_brace_level == 1){
+    cout << "Braces in this JSON are correct" << endl;
+  }
+  else {
+    cout << "Braces in this JSON are incorrect" << endl << "Last brace has level " << (int)last_brace_level << ", but should have level 1" << endl;
+  }
   
 
   return 0;

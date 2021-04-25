@@ -10,6 +10,13 @@ using namespace std;
 
 typedef thrust::tuple<char, int> char_and_position;
 
+struct json_char {
+  char _char;
+  char type; // 1 for opening or -1 for closing
+  int position; // position in file
+  short level;
+}
+
 struct braces_to_numbers
 {
   __host__ __device__

@@ -78,7 +78,7 @@ int main(int argc, char **argv)
 
 
   thrust::host_vector<char> H_file(s.begin(), s.end());
-  thrust::device_vector<char> D_file(file_size);
+  thrust::device_vector<char> D_file(H_file.size());
 
   size_t file_size = H_file.size();
 

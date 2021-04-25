@@ -1,6 +1,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <thrust/reduce.h>
+#include <thrust/logical.h>
 #include <thrust/functional.h>
 #include <thrust/copy.h>
 #include <thrust/iterator/counting_iterator.h>
@@ -75,6 +76,7 @@ bool h_is_balanced_parentheses(const string& s)
 int main(int argc, char **argv)
 {
   cout << "CUDA JSON Validator" << endl << endl;
+  string result = "";
 
   auto startReadingFile = chrono::steady_clock::now();
 
@@ -90,8 +92,8 @@ int main(int argc, char **argv)
 
   auto startCpu = chrono::steady_clock::now();
   //cpu
-  string result = h_is_balanced_parentheses(s) ? "correct" : "wrong";
-  cout << "\nCpu algorithm claims that file is " << result <<endl;
+  string result_cpu = h_is_balanced_parentheses(s) ? "correct" : "wrong";
+  cout << "\nCpu algorithm claims that file is " << result_cpu <<endl;
   elapsedTime(startCpu, "Cpu alogithm");
 
   auto startCopying = chrono::steady_clock::now();
@@ -129,23 +131,63 @@ int main(int argc, char **argv)
   // Add 1 to closing braces
   thrust::transform_if(D_json_chars.begin(), D_json_chars.end(), D_json_chars.begin(), D_json_chars.begin(), increment(), is_closing_brace());
 
+
+  thrust::device_vector<json_char> D_one_type_only(D_json_chars.size());
+
+
+  // Check if everything between corresponding { and } is correct
+  auto last_brace = thrust::copy_if(D_json_chars.begin(), D_json_chars.end(), D_one_type_only.begin(), is_brace());
+  int braces_count = last_brace - D_one_type_only.begin();
+
+  if(braces_count % 2){
+    result = "Uneven number of braces";
+  } else if(braces_count > 0){
+    auto adjacent_braces = thrust::make_zip_iterator(thrust::make_tuple(D_one_type_only.begin(), D_one_type_only.begin() + 1));
+    bool are_braces_corrent = thrust::all_of(adjacent_braces, adjacent_braces + braces_count - 1, opening_and_closing_chars_have_the_same_level());
+
+    if(!are_braces_corrent){
+      result = "Something between some braces is incorrect";
+    }
+  }
+
+  // Check if everything between corresponding [ and ] is correct
+  auto last_bracket = thrust::copy_if(D_json_chars.begin(), D_json_chars.end(), D_one_type_only.begin(), is_bracket());
+  int brackets_count = last_bracket - D_one_type_only.begin();
+
+  if(brackets_count % 2){
+    result = "Uneven number of brackets";
+  } else if(brackets_count > 0){
+    auto adjacent_brackets = thrust::make_zip_iterator(thrust::make_tuple(D_one_type_only.begin(), D_one_type_only.begin() + 1));
+    bool are_brackets_corrent = thrust::all_of(adjacent_brackets, adjacent_brackets + brackets_count - 1, opening_and_closing_chars_have_the_same_level());
+
+    if(!are_brackets_corrent){
+      result = "Something between some brackets is incorrect";
+    }
+  }
+
   elapsedTime(startCalculations, "Calculations");
 
   /*
-  for(int i = 0; i < D_braces_pos.size(); i++){
+  for(int i = 0; i < D_json_chars.size(); i++){
     json_char c = (json_char)D_json_chars[i];
     cout << c.position << " - " << c._char << " - " << c.level << endl;
   }
   */
+
   char last_brace_level = ((json_char)D_json_chars[D_json_chars.size() - 1]).level;
 
-  if(last_brace_level == 1){
-    cout << "Braces in this JSON are correct" << endl;
+  if(result != "" && last_brace_level != 1){
+    stringstream tmp;
+    tmp << "Braces or brackets in this JSON are incorrect. Last brace has level " << (int)last_brace_level << ", but should have level 1";
+    result = tmp.str();
   }
-  else {
-    cout << "Braces in this JSON are incorrect" << endl << "Last brace has level " << (int)last_brace_level << ", but should have level 1" << endl;
+ 
+
+  if(result != ""){
+    cout << "JSON is incorrect:\n\t" << result << endl;
+  } else {
+    cout << "JSON is correct" << endl;
   }
   
-
   return 0;
 }

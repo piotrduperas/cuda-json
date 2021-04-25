@@ -17,6 +17,9 @@ struct json_char {
   short level;
 };
 
+typedef thrust::tuple<json_char, json_char> adjacent_chars;
+
+
 struct braces_to_numbers
 {
   __host__ __device__
@@ -85,6 +88,43 @@ struct assign_level_to_json_char
   json_char operator()(json_char& x, const short& level) const { 
     x.level = level;
     return x;
+  }
+};
+
+struct is_brace
+{
+  __host__ __device__
+  bool operator()(const json_char& x)
+  {
+    return 
+      x._char == '{' || 
+      x._char == '}';
+  }
+};
+
+struct is_bracket
+{
+  __host__ __device__
+  bool operator()(const json_char& x)
+  {
+    return 
+      x._char == '[' || 
+      x._char == ']';
+  }
+};
+
+struct opening_and_closing_chars_have_the_same_level
+{
+  __host__ __device__
+  bool operator()(const adjacent_chars& x)
+  {
+    json_char c1 = x.get<0>();
+    json_char c2 = x.get<1>();
+    
+    if(c1.type == 1 && c2.type == -1) {
+      return c1.level == c2.level;
+    }
+    return true;
   }
 };
 

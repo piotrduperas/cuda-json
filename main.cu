@@ -68,8 +68,7 @@ bool h_is_balanced_parentheses(const string& s)
         else return false;
       }
     }
-    if(depth==0) return true;
-    return false;
+    return depth==0 && bracket_stack.empty();
 }
 
 int main(int argc, char **argv)

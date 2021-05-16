@@ -140,7 +140,7 @@ int main(int argc, char **argv)
   thrust::transform_inclusive_scan(D_json_chars.begin(), D_json_chars.end(), D_levels.begin(), get_type_from_json_char(), thrust::plus<short>());
   thrust::transform(D_json_chars.begin(), D_json_chars.end(), D_levels.begin(), D_json_chars.begin(), assign_level_to_json_char());
   // Add 1 to closing braces
-  thrust::transform_if(D_json_chars.begin(), D_json_chars.end(), D_json_chars.begin(), D_json_chars.begin(), increment(), is_closing_brace());
+  //thrust::transform_if(D_json_chars.begin(), D_json_chars.end(), D_json_chars.begin(), D_json_chars.begin(), increment(), is_closing_brace());
 
 
   thrust::device_vector<json_char> D_one_type_only(D_json_chars.size());

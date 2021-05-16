@@ -86,7 +86,7 @@ struct assign_level_to_json_char
 {
   __host__ __device__
   json_char operator()(json_char& x, const short& level) const { 
-    x.level = level;
+    x.level = level + x.type == 1 ? 0 : 1;
     return x;
   }
 };

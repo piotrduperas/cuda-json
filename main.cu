@@ -73,9 +73,20 @@ bool h_is_balanced_parentheses(const string& s)
     return false;
 }
 
+__global__ void warm_up_gpu(){
+  unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  float ia, ib;
+  ia = ib = 0.0f;
+  ib += ia + tid; 
+}
+
 int main(int argc, char **argv)
 {
   cout << "CUDA JSON Validator" << endl << endl;
+  cout << "Warming up" << endl << endl;
+  warm_up_gpu<<<1024, 1024>>>();
+
+
   string result = "";
 
   auto startReadingFile = chrono::steady_clock::now();

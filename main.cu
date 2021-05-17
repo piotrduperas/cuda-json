@@ -92,7 +92,7 @@ int main(int argc, char **argv)
   auto startReadingFile = chrono::steady_clock::now();
 
   // Reading file
-  const string& json_file = argc == 2 ? argv[1] : "samples/senators_short.json";
+  const string& json_file = argc == 2 ? argv[1] : "samples/citylots.json";
   ifstream ifile(json_file);
 
   ostringstream ss;
@@ -103,8 +103,8 @@ int main(int argc, char **argv)
 
   auto startCpu = chrono::steady_clock::now();
   //cpu
-  string result_cpu = h_is_balanced_parentheses(s) ? "correct" : "wrong";
-  cout << "\nCpu algorithm claims that file is " << result_cpu <<endl;
+  string result_cpu = h_is_balanced_parentheses(s) ? "correct" : "incorrect";
+  cout << "\nCpu: Json is " << result_cpu <<endl;
   elapsedTime(startCpu, "Cpu alogithm");
 
   auto startCopying = chrono::steady_clock::now();
@@ -135,6 +135,7 @@ int main(int argc, char **argv)
 
   // Transform { to 1, } to -1
   thrust::transform(D_braces_pos.begin(), D_braces_pos.end(), D_json_chars.begin(), braces_to_numbers());
+  
 
   // Calculate nesting levels of braces
   thrust::transform_inclusive_scan(D_json_chars.begin(), D_json_chars.end(), D_levels.begin(), get_type_from_json_char(), thrust::plus<short>());
@@ -145,43 +146,49 @@ int main(int argc, char **argv)
 
   thrust::device_vector<json_char> D_one_type_only(D_json_chars.size());
 
-
-  // Check if everything between corresponding { and } is correct
-  auto last_brace = thrust::copy_if(D_json_chars.begin(), D_json_chars.end(), D_one_type_only.begin(), is_brace());
-  int braces_count = last_brace - D_one_type_only.begin();
-
-  if(braces_count % 2){
-    result = "Uneven number of braces";
-  } else if(braces_count > 0){
-    auto adjacent_braces = thrust::make_zip_iterator(thrust::make_tuple(D_one_type_only.begin(), D_one_type_only.begin() + 1));
-    bool are_braces_correct = thrust::all_of(adjacent_braces, adjacent_braces + braces_count - 1, opening_and_closing_chars_have_the_same_level());
-
-    if(!are_braces_correct){
-      result = "Something between some braces is incorrect";
+  if(!D_json_chars.size()%2){
+    cout<<" wrong brackes size " << endl;
+    auto adjacent_braces = thrust::make_zip_iterator(thrust::make_tuple(D_json_chars.begin(), D_json_chars.begin() + 1));
+    if(!thrust::all_of(adjacent_braces, adjacent_braces + D_json_chars.size() - 1, opening_and_closing_chars_have_the_same_level_and_are_corresponding())){
+      result = " {] or [} found or opening and closing chars are not on the same level ";
     }
   }
+  //Check if everything between corresponding { and } is correct
+  // auto last_brace = thrust::copy_if(D_json_chars.begin(), D_json_chars.end(), D_one_type_only.begin(), is_brace());
+  // int braces_count = last_brace - D_one_type_only.begin();
 
-  // Check if everything between corresponding [ and ] is correct
-  auto last_bracket = thrust::copy_if(D_json_chars.begin(), D_json_chars.end(), D_one_type_only.begin(), is_bracket());
-  int brackets_count = last_bracket - D_one_type_only.begin();
+  // if(braces_count % 2){
+  //   result = "Uneven number of braces";
+  // } else if(braces_count > 0){
+  //   auto adjacent_braces = thrust::make_zip_iterator(thrust::make_tuple(D_one_type_only.begin(), D_one_type_only.begin() + 1));
+  //   bool are_braces_correct = thrust::all_of(adjacent_braces, adjacent_braces + braces_count - 1, opening_and_closing_chars_have_the_same_level());
 
-  if(brackets_count % 2){
-    result = "Uneven number of brackets";
-  } else if(brackets_count > 0){
-    auto adjacent_brackets = thrust::make_zip_iterator(thrust::make_tuple(D_one_type_only.begin(), D_one_type_only.begin() + 1));
-    bool are_brackets_correct = thrust::all_of(adjacent_brackets, adjacent_brackets + brackets_count - 1, opening_and_closing_chars_have_the_same_level());
+  //   if(!are_braces_correct){
+  //     result = "Something between some braces is incorrect";
+  //   }
+  // }
 
-    if(!are_brackets_correct){
-      result = "Something between some brackets is incorrect";
-    }
-  }
+  // // Check if everything between corresponding [ and ] is correct
+  // auto last_bracket = thrust::copy_if(D_json_chars.begin(), D_json_chars.end(), D_one_type_only.begin(), is_bracket());
+  // int brackets_count = last_bracket - D_one_type_only.begin();
 
-  auto adjacent_chars = thrust::make_zip_iterator(thrust::make_tuple(D_json_chars.begin(), D_json_chars.begin() + 1));
-  bool are_chars_correct = thrust::all_of(adjacent_chars, adjacent_chars + D_json_chars.size() - 1, opening_and_closing_chars_are_corresponding());
+  // if(brackets_count % 2){
+  //   result = "Uneven number of brackets";
+  // } else if(brackets_count > 0){
+  //   auto adjacent_brackets = thrust::make_zip_iterator(thrust::make_tuple(D_one_type_only.begin(), D_one_type_only.begin() + 1));
+  //   bool are_brackets_correct = thrust::all_of(adjacent_brackets, adjacent_brackets + brackets_count - 1, opening_and_closing_chars_have_the_same_level());
 
-  if(!are_chars_correct){
-    result = "Found sequence [} or {]";
-  }
+  //   if(!are_brackets_correct){
+  //     result = "Something between some brackets is incorrect";
+  //   }
+  // }
+
+  // auto adjacent_chars = thrust::make_zip_iterator(thrust::make_tuple(D_json_chars.begin(), D_json_chars.begin() + 1));
+  // bool are_chars_correct = thrust::all_of(adjacent_chars, adjacent_chars + D_json_chars.size() - 1, opening_and_closing_chars_are_corresponding());
+
+  // if(!are_chars_correct){
+  //   result = "Found sequence [} or {]";
+  // }
 
   elapsedTime(startCalculations, "Calculations");
 

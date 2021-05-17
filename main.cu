@@ -143,10 +143,14 @@ int main(int argc, char **argv)
   // Add 1 to closing braces
   //thrust::transform_if(D_json_chars.begin(), D_json_chars.end(), D_json_chars.begin(), D_json_chars.begin(), increment(), is_closing_brace());
 
+  char last_brace_level = ((json_char)D_json_chars[D_json_chars.size() - 1]).level;
 
-  thrust::device_vector<json_char> D_one_type_only(D_json_chars.size());
+  if(result != "" && last_brace_level != 1){
+    stringstream tmp;
+    tmp << "Braces or brackets in this JSON are incorrect. Last brace has level " << (int)last_brace_level << ", but should have level 1";
+    result = tmp.str();
+  }
 
-  thrust::copy(D_json_chars.begin(), D_json_chars.end(), D_one_type_only.begin());
   // Check if everything between corresponding { and } is correct
   //auto last_brace = thrust::copy_if(D_json_chars.begin(), D_json_chars.end(), D_one_type_only.begin(), is_brace());
   //int braces_count = last_brace - D_one_type_only.begin();
@@ -169,9 +173,9 @@ int main(int argc, char **argv)
   //if(brackets_count % 2){
   //  result = "Uneven number of brackets";
   //} else if(brackets_count > 0){
-    thrust::partition(D_one_type_only.begin(), D_one_type_only.end(), is_closing_brace());
-    auto adjacent_brackets = thrust::make_zip_iterator(thrust::make_tuple(D_one_type_only.begin(), D_one_type_only.begin() + 1));
-    bool are_brackets_correct = thrust::all_of(adjacent_brackets, adjacent_brackets + D_one_type_only.size(), opening_and_closing_chars_have_the_same_level());
+    thrust::partition(D_json_chars.begin(), D_json_chars.end(), is_closing_brace());
+    auto adjacent_brackets = thrust::make_zip_iterator(thrust::make_tuple(D_json_chars.begin(), D_json_chars.begin() + 1));
+    bool are_brackets_correct = thrust::all_of(adjacent_brackets, adjacent_brackets + D_json_chars.size(), opening_and_closing_chars_have_the_same_level());
 
     if(!are_brackets_correct){
       result = "Something between some brackets is incorrect";
@@ -194,13 +198,7 @@ int main(int argc, char **argv)
   }
   */
 
-  char last_brace_level = ((json_char)D_json_chars[D_json_chars.size() - 1]).level;
 
-  if(result != "" && last_brace_level != 1){
-    stringstream tmp;
-    tmp << "Braces or brackets in this JSON are incorrect. Last brace has level " << (int)last_brace_level << ", but should have level 1";
-    result = tmp.str();
-  }
  
 
   if(result != ""){

@@ -12,4 +12,5 @@ main.exe
 
 # big example files
 
-samples/citylots.json 
+samples/citylots.json
+sample_*.json

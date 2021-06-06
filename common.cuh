@@ -18,6 +18,10 @@ struct json_char {
 };
 
 typedef thrust::tuple<json_char, json_char> adjacent_chars;
+typedef thrust::tuple<char, char> adjacent_chars2;
+typedef thrust::tuple<char, short> char_and_level;
+typedef thrust::tuple<char_and_level, char_and_level> adjacent_chars_and_levels;
+
 
 
 struct braces_to_numbers
@@ -40,6 +44,21 @@ struct braces_to_numbers
     }
 
     return c;
+  }
+};
+
+struct braces_to_numbers2
+{
+  __host__ __device__
+  char operator()(const char& x) const { 
+    switch(x) {
+      case '{':
+      case '[':
+        return 1;
+        break;
+      default:
+        return -1;
+    }
   }
 };
 
@@ -74,11 +93,27 @@ struct increment
   }
 };
 
+struct increment2
+{
+  __host__ __device__
+  char operator()(const char& x) const { 
+    return x + 1;
+  }
+};
+
 struct is_closing_brace
 {
   __host__ __device__
   bool operator()(const json_char& x) const { 
     return x.type == -1;
+  }
+};
+
+struct is_closing_brace2
+{
+  __host__ __device__
+  bool operator()(const char& x) const { 
+    return x == '}' || x == ']';
   }
 };
 
@@ -99,6 +134,18 @@ struct is_brace
     return 
       x._char == '{' || 
       x._char == '}';
+  }
+};
+
+struct is_brace2
+{
+  __host__ __device__
+  bool operator()(const char_and_level& x)
+  {
+    char c = x.get<0>();
+    return 
+      c == '{' || 
+      c == '}';
   }
 };
 
@@ -128,6 +175,26 @@ struct opening_and_closing_chars_have_the_same_level
   }
 };
 
+struct opening_and_closing_chars_have_the_same_level2
+{
+  __host__ __device__
+  bool operator()(const adjacent_chars_and_levels& x)
+  {
+    char_and_level cl1 = x.get<0>();
+    char_and_level cl2 = x.get<1>();
+
+    char c1 = cl1.get<0>();
+    char c2 = cl2.get<0>();
+    short l1 = cl1.get<1>();
+    short l2 = cl2.get<1>();
+
+    if((c1 == '[' || c1 == '{') && (c2 == ']' || c2 == '}')) {
+      return l1 == l2;
+    }
+    return true;
+  }
+};
+
 struct opening_and_closing_chars_are_corresponding
 {
   __host__ __device__
@@ -141,6 +208,24 @@ struct opening_and_closing_chars_are_corresponding
     }
     if(c1._char == '{') {
       return c2._char != ']';
+    }
+    return true;
+  }
+};
+
+struct opening_and_closing_chars_are_corresponding2
+{
+  __host__ __device__
+  bool operator()(const adjacent_chars2& x)
+  {
+    char c1 = x.get<0>();
+    char c2 = x.get<1>();
+    
+    if(c1 == '[') {
+      return c2 != '}';
+    }
+    if(c1 == '{') {
+      return c2 != ']';
     }
     return true;
   }

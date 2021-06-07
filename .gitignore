@@ -13,4 +13,5 @@ main.exe
 # big example files
 
 samples/citylots.json
+samples/citylots2.json
 sample_*.json

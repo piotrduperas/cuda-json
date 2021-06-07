@@ -17,7 +17,7 @@
 #include <iterator>
 #include <sstream>
 #include <chrono>
-#include "common.cuh"
+#include "common_soa.cuh"
 #include <stack>
 
 using namespace std;
@@ -82,11 +82,12 @@ __global__ void warm_up_gpu(){
   ib += ia + tid; 
 }
 
-struct data
+
+struct json_data
 {
   thrust::device_vector<char> chars;
-  thrust::device_vector<short> positions;
-  thrust::device_vector<short> levels;
+  thrust::device_vector<POSITIONS_TYPE> positions;
+  thrust::device_vector<LEVELS_TYPE> levels;
 };
 
 int main(int argc, char **argv)
@@ -129,26 +130,26 @@ int main(int argc, char **argv)
   elapsedTime(startCopying, "Copying file");
   auto startCalculations = chrono::steady_clock::now();
 
-  data dd;
+  json_data data;
 
-  dd.chars = thrust::device_vector<char>(D_file.size());
-  dd.positions = thrust::device_vector<short>(D_file.size());
+  data.chars = thrust::device_vector<char>(D_file.size());
+  data.positions = thrust::device_vector<POSITIONS_TYPE>(D_file.size());
 
   auto char_and_pos = thrust::make_zip_iterator(thrust::make_tuple(D_file.begin(), thrust::make_counting_iterator(0)));
-  auto d_char_and_pos = thrust::make_zip_iterator(thrust::make_tuple(dd.chars.begin(), dd.positions.begin()));
+  auto d_char_and_pos = thrust::make_zip_iterator(thrust::make_tuple(data.chars.begin(), data.positions.begin()));
 
   auto last_brace_it = thrust::copy_if(char_and_pos, char_and_pos + s.length(), d_char_and_pos, is_brace_or_bracket());
   
   auto chars_count = last_brace_it - d_char_and_pos;
-  dd.chars.resize(chars_count);
-  dd.positions.resize(chars_count);
+  data.chars.resize(chars_count);
+  data.positions.resize(chars_count);
 
-  dd.levels = thrust::device_vector<short>(chars_count);
+  data.levels = thrust::device_vector<LEVELS_TYPE>(chars_count);
 
-  thrust::transform_inclusive_scan(dd.chars.begin(), dd.chars.end(), dd.levels.begin(), braces_to_numbers2(), thrust::plus<short>());
-  thrust::transform_if(dd.levels.begin(), dd.levels.end(), dd.chars.begin(), dd.levels.begin(), increment2(), is_closing_brace2());
+  thrust::transform_inclusive_scan(data.chars.begin(), data.chars.end(), data.levels.begin(), braces_to_numbers(), thrust::plus<LEVELS_TYPE>());
+  thrust::transform_if(data.levels.begin(), data.levels.end(), data.chars.begin(), data.levels.begin(), increment(), is_closing_brace());
 
-  char last_brace_level = dd.levels[dd.levels.size() - 1];
+  char last_brace_level = data.levels[data.levels.size() - 1];
 
   if(result == "" && last_brace_level != 1){
     stringstream tmp;
@@ -157,18 +158,18 @@ int main(int argc, char **argv)
   }
 
 
-  auto adjacent_chars = thrust::make_zip_iterator(thrust::make_tuple(dd.chars.begin(), dd.chars.begin() + 1));
-  bool are_chars_correct = thrust::all_of(adjacent_chars, adjacent_chars + dd.chars.size() - 1, opening_and_closing_chars_are_corresponding2());
+  auto adjacent_chars = thrust::make_zip_iterator(thrust::make_tuple(data.chars.begin(), data.chars.begin() + 1));
+  bool are_chars_correct = thrust::all_of(adjacent_chars, adjacent_chars + data.chars.size() - 1, opening_and_closing_chars_are_corresponding());
 
   if(!are_chars_correct){
     result = "Found sequence [} or {]";
   }
 
-  auto chars_and_levels = thrust::make_zip_iterator(thrust::make_tuple(dd.chars.begin(), dd.levels.begin()));
-  auto chars_and_levels_end = thrust::make_zip_iterator(thrust::make_tuple(dd.chars.end(), dd.levels.end()));
-  thrust::stable_partition(chars_and_levels, chars_and_levels_end, is_brace2());
+  auto chars_and_levels = thrust::make_zip_iterator(thrust::make_tuple(data.chars.begin(), data.levels.begin()));
+  auto chars_and_levels_end = thrust::make_zip_iterator(thrust::make_tuple(data.chars.end(), data.levels.end()));
+  thrust::stable_partition(chars_and_levels, chars_and_levels_end, is_brace());
   auto adjacent_brackets = thrust::make_zip_iterator(thrust::make_tuple(chars_and_levels, chars_and_levels + 1));
-  bool are_brackets_correct = thrust::all_of(adjacent_brackets, adjacent_brackets + dd.chars.size(), opening_and_closing_chars_have_the_same_level2());
+  bool are_brackets_correct = thrust::all_of(adjacent_brackets, adjacent_brackets + data.chars.size(), opening_and_closing_chars_have_the_same_level());
 
   if(!are_brackets_correct){
     result = "Something between some brackets is incorrect";

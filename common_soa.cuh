@@ -8,7 +8,7 @@
 
 using namespace std;
 
-#define POSITIONS_TYPE char
+#define POSITIONS_TYPE int
 #define LEVELS_TYPE char
 
 typedef thrust::tuple<char, POSITIONS_TYPE> char_and_position;

@@ -6,7 +6,6 @@
 #include <thrust/copy.h>
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/iterator/zip_iterator.h>
-#include <thrust/iterator/transform_iterator.h>
 #include <thrust/transform_scan.h>
 #include <thrust/partition.h>
 #include <fstream>
@@ -17,7 +16,7 @@
 #include <iterator>
 #include <sstream>
 #include <chrono>
-#include "common_soa.cuh"
+#include "common.cuh"
 #include <stack>
 
 using namespace std;
@@ -82,14 +81,6 @@ __global__ void warm_up_gpu(){
   ib += ia + tid; 
 }
 
-
-struct json_data
-{
-  thrust::device_vector<char> chars;
-  thrust::device_vector<POSITIONS_TYPE> positions;
-  thrust::device_vector<LEVELS_TYPE> levels;
-};
-
 int main(int argc, char **argv)
 {
   cout << "CUDA JSON Validator" << endl << endl;
@@ -130,46 +121,49 @@ int main(int argc, char **argv)
   elapsedTime(startCopying, "Copying file");
   auto startCalculations = chrono::steady_clock::now();
 
-  json_data data;
+  // Vector for (brace, it's position) pair
+  thrust::device_vector<char_and_position> D_braces_pos(file_size);
 
-  data.chars = thrust::device_vector<char>(D_file.size());
-  data.positions = thrust::device_vector<POSITIONS_TYPE>(D_file.size());
-
+  // Zip file characters with their positions
   auto char_and_pos = thrust::make_zip_iterator(thrust::make_tuple(D_file.begin(), thrust::make_counting_iterator(0)));
-  auto d_char_and_pos = thrust::make_zip_iterator(thrust::make_tuple(data.chars.begin(), data.positions.begin()));
-
-  auto last_brace_it = thrust::copy_if(char_and_pos, char_and_pos + s.length(), d_char_and_pos, is_brace_or_bracket());
   
-  auto chars_count = last_brace_it - d_char_and_pos;
-  data.chars.resize(chars_count);
-  data.positions.resize(chars_count);
+  // Filter only braces
+  auto last_brace_it = thrust::copy_if(char_and_pos, char_and_pos + s.length(), D_braces_pos.begin(), is_brace_or_bracket());
+  D_braces_pos.resize(last_brace_it - D_braces_pos.begin());
 
-  data.levels = thrust::device_vector<LEVELS_TYPE>(chars_count);
+  thrust::device_vector<json_char> D_json_chars(D_braces_pos.size());
+  thrust::device_vector<short> D_levels(D_braces_pos.size());
 
-  thrust::transform_inclusive_scan(data.chars.begin(), data.chars.end(), data.levels.begin(), braces_to_numbers(), thrust::plus<LEVELS_TYPE>());
-  thrust::transform_if(data.levels.begin(), data.levels.end(), data.chars.begin(), data.levels.begin(), increment(), is_closing_brace());
+  // Transform { to 1, } to -1
+  thrust::transform(D_braces_pos.begin(), D_braces_pos.end(), D_json_chars.begin(), braces_to_numbers());
 
-  char last_brace_level = data.levels[data.levels.size() - 1];
+  // Calculate nesting levels of braces
+  thrust::transform_inclusive_scan(D_json_chars.begin(), D_json_chars.end(), D_levels.begin(), get_type_from_json_char(), thrust::plus<short>());
+  thrust::transform(D_json_chars.begin(), D_json_chars.end(), D_levels.begin(), D_json_chars.begin(), assign_level_to_json_char());
+  // Add 1 to closing braces
+  //thrust::transform_if(D_json_chars.begin(), D_json_chars.end(), D_json_chars.begin(), D_json_chars.begin(), increment(), is_closing_brace());
 
-  if(result == "" && last_brace_level != 1){
+  char last_brace_level = ((json_char)D_json_chars[D_json_chars.size() - 1]).level;
+
+  if(result != "" && last_brace_level != 1){
     stringstream tmp;
     tmp << "Braces or brackets in this JSON are incorrect. Last brace has level " << (int)last_brace_level << ", but should have level 1";
     result = tmp.str();
   }
 
+  
 
-  auto adjacent_chars = thrust::make_zip_iterator(thrust::make_tuple(data.chars.begin(), data.chars.begin() + 1));
-  bool are_chars_correct = thrust::all_of(adjacent_chars, adjacent_chars + data.chars.size() - 1, opening_and_closing_chars_are_corresponding());
+  auto adjacent_chars = thrust::make_zip_iterator(thrust::make_tuple(D_json_chars.begin(), D_json_chars.begin() + 1));
+  bool are_chars_correct = thrust::all_of(adjacent_chars, adjacent_chars + D_json_chars.size() - 1, opening_and_closing_chars_are_corresponding());
 
   if(!are_chars_correct){
     result = "Found sequence [} or {]";
   }
 
-  auto chars_and_levels = thrust::make_zip_iterator(thrust::make_tuple(data.chars.begin(), data.levels.begin()));
-  auto chars_and_levels_end = thrust::make_zip_iterator(thrust::make_tuple(data.chars.end(), data.levels.end()));
-  thrust::stable_partition(chars_and_levels, chars_and_levels_end, is_brace());
-  auto adjacent_brackets = thrust::make_zip_iterator(thrust::make_tuple(chars_and_levels, chars_and_levels + 1));
-  bool are_brackets_correct = thrust::all_of(adjacent_brackets, adjacent_brackets + data.chars.size(), opening_and_closing_chars_have_the_same_level());
+  // Check if everything between corresponding { } nad [ ] is correct
+  thrust::stable_partition(D_json_chars.begin(), D_json_chars.end(), is_brace());
+  auto adjacent_brackets = thrust::make_zip_iterator(thrust::make_tuple(D_json_chars.begin(), D_json_chars.begin() + 1));
+  bool are_brackets_correct = thrust::all_of(adjacent_brackets, adjacent_brackets + D_json_chars.size(), opening_and_closing_chars_have_the_same_level());
 
   if(!are_brackets_correct){
     result = "Something between some brackets is incorrect";
